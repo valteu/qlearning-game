@@ -9,7 +9,6 @@ import random
 pygame.init()
 pygame.font.init()
 
-
 SIZE = 25
 
 WIDTH = 800
@@ -21,7 +20,7 @@ ENEMY_PENALTY = 300
 FOOD_REWARD = 25
 epsilon = 0.9
 EPS_DECAY = 0.9998 
-SHOW_EVERY = 10
+SHOW_EVERY = 500
 
 start_q_table = None
 
@@ -80,7 +79,6 @@ class Blob:
         x = abs(self.x)
         y = abs(self.y)
         pygame.draw.rect(screen, (color), (x * (WIDTH / SIZE), y * (HEIGHT / SIZE), w, h))
-        print(x, y)
  
 
 def main(epsilon):
@@ -147,6 +145,8 @@ def main(epsilon):
             q_table[obs][action] = new_q
 
             if show:
+                font = pygame.font.SysFont(None, 24)
+                img = font.render("Episode: " + str(episode), True, (0, 0, 0))
                 last_time = time.perf_counter()
                 duration = time.perf_counter() - last_time
                 last_time += duration
@@ -162,6 +162,7 @@ def main(epsilon):
                         obj.draw(screen, (0, 255, 0))
                     elif obj == player:
                         obj.draw(screen, (0, 0, 255))
+                screen.blit(img, (20, 20))
 
                 pygame.display.update()
                 pygame.time.delay(50)
