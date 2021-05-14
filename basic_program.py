@@ -1,9 +1,5 @@
 import numpy as np
-from PIL import Image
-import cv2
-import matplotlib.pyplot as plt
 import pickle
-from matplotlib import style
 import time
 import pygame
 
@@ -25,23 +21,13 @@ MOVE_PENALTY = 1
 ENEMY_PENALTY = 300
 FOOD_REWARD = 25
 epsilon = 0.9
-EPS_DECAY = 0.9998  # Every episode will be epsilon*EPS_DECAY
-SHOW_EVERY = 10  # how often to play through env visually.
+EPS_DECAY = 0.9998 
+SHOW_EVERY = 10
 
-start_q_table = None # None or Filename
+start_q_table = None
 
 LEARNING_RATE = 0.1
 DISCOUNT = 0.95
-
-PLAYER_N = 1  # player key in dict
-FOOD_N = 2  # food key in dict
-ENEMY_N = 3  # enemy key in dict
-
-# the dict!
-d = {1: (255, 175, 0),
-     2: (0, 255, 0),
-     3: (0, 0, 255)}
-
 
 class Blob:
     def __init__(self):
@@ -57,9 +43,6 @@ class Blob:
         return (self.x-other.x, self.y-other.y)
 
     def action(self, choice):
-        '''
-        Gives us 4 total movement options. (0,1,2,3)
-        '''
         if choice == 0:
             self.move(x=1, y=1)
         elif choice == 1:
@@ -70,14 +53,12 @@ class Blob:
             self.move(x=1, y=-1)
 
     def move(self, x=False, y=False):
-
-        # If no value for x, move randomly
+     
         if not x:
             self.x += np.random.randint(-1, 2)
         else:
             self.x += x
 
-        # If no value for y, move randomly
         if not y:
             self.y += np.random.randint(-1, 2)
         else:
@@ -108,7 +89,6 @@ def main(epsilon):
     pygame.display.set_caption('ai controlled game')
     # player = [obj for obj in objects if isinstance(obj, Player)][0]
     if start_q_table is None:
-    # initialize the q-table#
         q_table = {}
         for i in range(-SIZE+1, SIZE):
             for ii in range(-SIZE+1, SIZE):
@@ -174,10 +154,7 @@ def main(epsilon):
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         pygame.quit() 
-            # env = np.zeros((SIZE, SIZE, 3), dtype=np.uint8)  # starts an rbg of our size
-            # env[food.x][food.y] = d[FOOD_N]  # sets the food location tile to green color
-            # env[player.x][player.y] = d[PLAYER_N]  # sets the player tile to blue
-            # env[enemy.x][enemy.y] = d[ENEMY_N]  # sets the enemy location to red
+                    
                 screen.fill((200, 200, 200))
                 for obj in objects:
                     if obj == enemy:
@@ -192,12 +169,6 @@ def main(epsilon):
                 time.sleep(max(0, 1 / 60 - (time.perf_counter() - last_time)))
                 sys.stdout.flush()
 
-            # if reward == FOOD_REWARD or reward == -ENEMY_PENALTY:  # crummy code to hang at the end if we reach abrupt end for good reasons or not.
-            #     if cv2.waitKey(500) & 0xFF == ord('q'):
-            #         break
-            # else:
-            #     if cv2.waitKey(1) & 0xFF == ord('q'):
-            #         break
             episode_reward += reward
             if reward == FOOD_REWARD or reward == -ENEMY_PENALTY:
                 break
