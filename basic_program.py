@@ -1,7 +1,6 @@
 import numpy as np
 import pickle
 import time
-from matplotlib import style
 import pygame
 
 import sys
