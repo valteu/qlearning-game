@@ -9,7 +9,7 @@ import random
 pygame.init()
 pygame.font.init()
 
-SIZE = 25
+SIZE = 10
 
 WIDTH = 800
 HEIGHT = 800
@@ -53,14 +53,14 @@ class Blob:
     def move(self, x=False, y=False):
      
         if not x:
-            self.x += np.random.randint(-1, 2)
+            probe_x = self.x + np.random.randint(-1, 2)
         else:
-            self.x += x
+            probe_x = self.x + x
 
         if not y:
-            self.y += np.random.randint(-1, 2)
+            probe_y = self.y + np.random.randint(-1, 2)
         else:
-            self.y += y
+            probe_y = self.y + y
 
 
         # If we are out of bounds, fix!
@@ -73,6 +73,35 @@ class Blob:
         elif self.y > SIZE-1:
             self.y = SIZE-1
 
+        collision = check_wall_collision(probe_x, probe_y)
+        if collision == True:
+            pass
+        elif collision == False:
+            if 0 <= probe_x <= SIZE -1:
+                if 0 <= probe_y <= SIZE -1:
+                    self.x = probe_x
+                    self.y = probe_y
+
+    def draw(self, screen, color):
+        w = self.width
+        h = self.height
+        x = abs(self.x)
+        y = abs(self.y)
+        pygame.draw.rect(screen, (color), (x * (WIDTH / SIZE), y * (HEIGHT / SIZE), w, h))
+
+class Wall:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.width = int(WIDTH / SIZE)
+        self.height = int(HEIGHT / SIZE)
+
+    def __str__(self):
+        return f"{self.x}, {self.y}"
+
+    def __sub__(self, other):
+        return (self.x-other.x, self.y-other.y)
+
     def draw(self, screen, color):
         w = self.width
         h = self.height
@@ -80,10 +109,45 @@ class Blob:
         y = abs(self.y)
         pygame.draw.rect(screen, (color), (x * (WIDTH / SIZE), y * (HEIGHT / SIZE), w, h))
  
+def check_wall_collision(probe_x, probe_y):
+    for obj in walls:
+        if obj.x == probe_x:
+            if obj.y == probe_y:
+                return True
+    return False
+
+def load_walls(): 
+    global walls  
+    map_ = [
+        '   #      ',
+        '  ###     ',
+        '          ',
+        '          ',
+        '      ### ',
+        '     #  # ',
+        '     # ## ',
+        '          ',
+        '          ',
+        ' ###      ',
+    ]
+    walls = []
+    y = 0
+    for row in map_:
+        x = 0
+        for cell in row:
+            if cell == ' ':
+                pass
+            if cell =='#':
+                walls.append(Wall(x, y))   
+            x += 1
+        y += 1  
+    return walls   
 
 def main(epsilon):
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption('ai controlled game')
+    global walls
+    walls = load_walls()
     # player = [obj for obj in objects if isinstance(obj, Player)][0]
     if start_q_table is None:
         q_table = {}
@@ -105,8 +169,8 @@ def main(epsilon):
         enemy = Blob()
         objects = [food, enemy, player]
         if episode % SHOW_EVERY == 0:
-            # print(f"on #{episode}, epsilon is {epsilon}")
-            # print(f"{SHOW_EVERY} ep mean: {np.mean(episode_rewards[-SHOW_EVERY:])}")
+            print(f"on #{episode}, epsilon is {epsilon}")
+            print(f"{SHOW_EVERY} ep mean: {np.mean(episode_rewards[-SHOW_EVERY:])}")
             show = True
         else:
             show = False
@@ -146,7 +210,7 @@ def main(epsilon):
 
             if show:
                 font = pygame.font.SysFont(None, 24)
-                img = font.render("Episode: " + str(episode), True, (0, 0, 0))
+                img = font.render("Epoch: " + str(episode), True, (0, 0, 0))
                 last_time = time.perf_counter()
                 duration = time.perf_counter() - last_time
                 last_time += duration
@@ -162,6 +226,8 @@ def main(epsilon):
                         obj.draw(screen, (0, 255, 0))
                     elif obj == player:
                         obj.draw(screen, (0, 0, 255))
+                for obj in walls:
+                    obj.draw(screen, (255, 125, 0))
                 screen.blit(img, (20, 20))
 
                 pygame.display.update()
