@@ -1,6 +1,7 @@
 import numpy as np
 import pickle
 import time
+from matplotlib import style
 import pygame
 
 import sys
@@ -9,7 +10,6 @@ import random
 pygame.init()
 pygame.font.init()
 
-style.use("ggplot")
 
 SIZE = 25
 
