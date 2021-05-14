@@ -1,171 +1,211 @@
+import numpy as np
+from PIL import Image
+import cv2
+import matplotlib.pyplot as plt
+import pickle
+from matplotlib import style
+import time
 import pygame
 
-import time
 import sys
 import random
 
 pygame.init()
 pygame.font.init()
 
-SCALE = 40
+style.use("ggplot")
+
+SIZE = 25
 
 WIDTH = 800
-HEIGHT = 600
+HEIGHT = 800
 
-class Player:
-    def __init__(self, pos):
-        self.pos = pos
-        self.radius = 1
-        self.distance = distance_to_goal(self.pos)[0]
-        self.new_distance = WIDTH
-        self.weightleft = 1
-        self.weightright = 1
+HM_EPISODES = 25000
+MOVE_PENALTY = 1
+ENEMY_PENALTY = 300
+FOOD_REWARD = 25
+epsilon = 0.9
+EPS_DECAY = 0.9998  # Every episode will be epsilon*EPS_DECAY
+SHOW_EVERY = 10  # how often to play through env visually.
 
-    def draw(self, screen):
-        x, y = self.pos
-        r = self.radius * SCALE
-        pygame.draw.circle(screen, (255, 0, 0), (x, y - r), r)
+start_q_table = None # None or Filename
 
-    def update(self, objects, screen):
+LEARNING_RATE = 0.1
+DISCOUNT = 0.95
 
-        direction = "0"
-        speed = 5
-        objects = objects
-        x, y = list(self.pos)
+PLAYER_N = 1  # player key in dict
+FOOD_N = 2  # food key in dict
+ENEMY_N = 3  # enemy key in dict
 
-        action = random.uniform(0, 1)
-        if action <= ((1/2) * self.weightleft):
-            direction = "left"
-        elif action <= ((1) * self.weightright):
-            direction = "right"
-        # elif action <= ((1) * self.weightstand):
-        #     direction = "stand"
+# the dict!
+d = {1: (255, 175, 0),
+     2: (0, 255, 0),
+     3: (0, 0, 255)}
 
-        if direction == "left":
-            x -= speed
-        if direction == "right":
-            x += speed
-        if direction == "stand":
-            pass
 
-        self.new_distance = distance_to_goal(self.pos)
-        new_distance = int(self.new_distance[0])
-        if self.distance < new_distance:
-            print("wd")
-            if direction == "left":
-                self.weightleft = self.weightleft / 1.01
+class Blob:
+    def __init__(self):
+        self.x = np.random.randint(0, SIZE)
+        self.y = np.random.randint(0, SIZE)
+        self.width = int(WIDTH / SIZE)
+        self.height = int(HEIGHT / SIZE)
 
-            elif direction == "right":
-                self.weightright = self.weightright / 1.01
+    def __str__(self):
+        return f"{self.x}, {self.y}"
 
-        elif self.distance > new_distance:
-            print("bd")
-            if direction == "left":
-                self.weightleft = self.weightleft * 1.01
+    def __sub__(self, other):
+        return (self.x-other.x, self.y-other.y)
 
-            elif direction == "right":
-                self.weightright = self.weightright * 1.01
+    def action(self, choice):
+        '''
+        Gives us 4 total movement options. (0,1,2,3)
+        '''
+        if choice == 0:
+            self.move(x=1, y=1)
+        elif choice == 1:
+            self.move(x=-1, y=-1)
+        elif choice == 2:
+            self.move(x=-1, y=1)
+        elif choice == 3:
+            self.move(x=1, y=-1)
 
-        self.distance = new_distance
-        self.pos[0] = x
-            # self.pos[1] = y
-        print("l: ", self.weightleft)
-        print("r: ", self.weightright)
-        if check_collision(objects, self, [x, self.pos[1]]):
-            print("goal achieved")
+    def move(self, x=False, y=False):
 
-class Goal:
-    def __init__(self, pos):
-        self.pos = pos
-        self.width = 100
-        self.height = 600
+        # If no value for x, move randomly
+        if not x:
+            self.x += np.random.randint(-1, 2)
+        else:
+            self.x += x
 
-    def draw(self, screen):
+        # If no value for y, move randomly
+        if not y:
+            self.y += np.random.randint(-1, 2)
+        else:
+            self.y += y
+
+
+        # If we are out of bounds, fix!
+        if self.x < 0:
+            self.x = 0
+        elif self.x > SIZE-1:
+            self.x = SIZE-1
+        if self.y < 0:
+            self.y = 0
+        elif self.y > SIZE-1:
+            self.y = SIZE-1
+
+    def draw(self, screen, color):
         w = self.width
         h = self.height
-        x = self.pos[0] - w
-        y = self.pos[1] - h
-        pygame.draw.rect(screen, (0, 255, 0), (x, y, w, h))
-    def update(self, objects, screen):
-        pass
+        x = abs(self.x)
+        y = abs(self.y)
+        pygame.draw.rect(screen, (color), (x * (WIDTH / SIZE), y * (HEIGHT / SIZE), w, h))
+        print(x, y)
+ 
 
-def distance_to_goal(pos):
-    posx, posy = pos
-    goalx, goaly = goalpos
-
-    xdist = goalx - posx
-    ydist = goaly - posy
-    distance = [xdist, ydist]
-
-    return distance
-
-
-def load_level():
-    global goalpos
-    goalpos = [WIDTH, HEIGHT]
-    objects = []
-    objects.append(Player([WIDTH/2, HEIGHT]))
-    objects.append(Goal(goalpos))
-    return objects
-
-def check_collision(objects, mover, probe_pos):
-    collisions = []
-    for obj in objects:
-        if obj is mover:
-            continue
-        dist_x = obj.pos[0] - probe_pos[0]
-        # dist_y = obj.pos[1] - probe_pos[1]
-        if probe_pos[0] < mover.pos[0] and dist_x > 0:  #left
-            continue
-        if probe_pos[0] > mover.pos[0] and dist_x < 0:  #right
-            continue
-        # if probe_pos[1] < mover.pos[1] and dist_y > 0:  #up
-        #     continue
-        # if probe_pos[1] > mover.pos[1] and dist_y < 0:  #down
-        #     continue
-        if abs(dist_x) < 0.95:
-            collisions.append(obj)
-    return collisions   
-
-def main():
+def main(epsilon):
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption('ai controlled game')
-    objects = load_level()
     # player = [obj for obj in objects if isinstance(obj, Player)][0]
+    if start_q_table is None:
+    # initialize the q-table#
+        q_table = {}
+        for i in range(-SIZE+1, SIZE):
+            for ii in range(-SIZE+1, SIZE):
+                for iii in range(-SIZE+1, SIZE):
+                        for iiii in range(-SIZE+1, SIZE):
+                            q_table[((i, ii), (iii, iiii))] = [np.random.uniform(-5, 0) for i in range(4)]
 
-    goal = WIDTH
+    else:
+        with open(start_q_table, "rb") as f:
+            q_table = pickle.load(f)
 
-    last_time = time.perf_counter()
-    run = True
-    while run:
-        duration = time.perf_counter() - last_time
-        last_time += duration
+    episode_rewards = []
 
-        # Update
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False       
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_ESCAPE]:
-            run = False
+    for episode in range(HM_EPISODES):
+        player = Blob()
+        food = Blob()
+        enemy = Blob()
+        objects = [food, enemy, player]
+        if episode % SHOW_EVERY == 0:
+            # print(f"on #{episode}, epsilon is {epsilon}")
+            # print(f"{SHOW_EVERY} ep mean: {np.mean(episode_rewards[-SHOW_EVERY:])}")
+            show = True
+        else:
+            show = False
 
-        for obj in objects:
-            obj.update(objects, screen)
+        episode_reward = 0
+        for i in range(200):
+            obs = (player-food, player-enemy)
+            #print(obs)
+            if np.random.random() > epsilon:
+                # GET THE ACTION
+                action = np.argmax(q_table[obs])
+            else:
+                action = np.random.randint(0, 4)
+            # Take the action!
+            player.action(action)
 
-        # Draw
-
-        screen.fill((200, 200, 100))
-        for obj in objects:
-            obj.draw(screen)
+            enemy.move()
+            food.move()
 
 
-        pygame.display.update()
+            if player.x == enemy.x and player.y == enemy.y:
+                reward = -ENEMY_PENALTY
+            elif player.x == food.x and player.y == food.y:
+                reward = FOOD_REWARD
+            else:
+                reward = -MOVE_PENALTY
 
-        # Wait
-        pygame.time.delay(1)
-        time.sleep(max(0, 1 / 60 - (time.perf_counter() - last_time)))
-        sys.stdout.flush()
+            new_obs = (player-food, player-enemy)
+            max_future_q = np.max(q_table[new_obs])
+            current_q = q_table[obs][action]
 
-    pygame.quit()
+            if reward == FOOD_REWARD:
+                new_q = FOOD_REWARD
+            else:
+                new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
+            q_table[obs][action] = new_q
 
-main()
+            if show:
+                last_time = time.perf_counter()
+                duration = time.perf_counter() - last_time
+                last_time += duration
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit() 
+            # env = np.zeros((SIZE, SIZE, 3), dtype=np.uint8)  # starts an rbg of our size
+            # env[food.x][food.y] = d[FOOD_N]  # sets the food location tile to green color
+            # env[player.x][player.y] = d[PLAYER_N]  # sets the player tile to blue
+            # env[enemy.x][enemy.y] = d[ENEMY_N]  # sets the enemy location to red
+                screen.fill((200, 200, 200))
+                for obj in objects:
+                    if obj == enemy:
+                        obj.draw(screen, (255, 0, 0))
+                    elif obj == food:
+                        obj.draw(screen, (0, 255, 0))
+                    elif obj == player:
+                        obj.draw(screen, (0, 0, 255))
+
+                pygame.display.update()
+                pygame.time.delay(50)
+                time.sleep(max(0, 1 / 60 - (time.perf_counter() - last_time)))
+                sys.stdout.flush()
+
+            # if reward == FOOD_REWARD or reward == -ENEMY_PENALTY:  # crummy code to hang at the end if we reach abrupt end for good reasons or not.
+            #     if cv2.waitKey(500) & 0xFF == ord('q'):
+            #         break
+            # else:
+            #     if cv2.waitKey(1) & 0xFF == ord('q'):
+            #         break
+            episode_reward += reward
+            if reward == FOOD_REWARD or reward == -ENEMY_PENALTY:
+                break
+        episode_rewards.append(episode_reward)
+        epsilon *= EPS_DECAY
+
+    oving_avg = np.convolve(episode_rewards, np.ones((SHOW_EVERY,))/SHOW_EVERY, mode='valid')
+    with open(f"qtable-{int(time.time())}.pickle", "wb") as f:
+        pickle.dump(q_table, f)
+
+main(epsilon)
