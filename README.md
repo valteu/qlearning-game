@@ -22,6 +22,7 @@ MOVE_PENALTY | 1 | Punishment the "player" gets every time it moves (reward - MO
 ENEMY_PENALTY | 300 | Punishment the "player" gets every time it hits the "enemy" (reward - ENEMY_PENALTY)
 FOOD | 25 | Reward the "player" gets every time it hits the "food" (reward + FOOD)
 SHOW_EVERY | 5000 | Shows which epochs will be visualized (HM_EPISODES / SHOW_EVERY = number of visualized epochs)
+MAX_STEPS | 200 | Maximum number of steps the "player" can move per epoch
 
 **Bugs:**
 - "player", "food", "enemy" can spawn on other object
