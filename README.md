@@ -34,4 +34,4 @@ SHOW_EVERY | 5000 | Shows which epochs will be visualized (HM_EPISODES / SHOW_EV
 - [ ] add obstacles
 
 Linked tutorial:
-https://www.youtube.com/watch?v=G92TF4xYQcU&t=2716s
+https://www.youtube.com/watch?v=G92TF4xYQcU&t=0s
