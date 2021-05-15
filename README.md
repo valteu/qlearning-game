@@ -28,6 +28,7 @@ SHOW_EVERY | 5000 | Shows which epochs will be visualized (HM_EPISODES / SHOW_EV
 
 **Checklist:**
 - [x] add "walls"
+- [x] load "walls" from a customizable map 
 - [ ] fix spawning
 - [ ] add multiple "enemies"
 - [ ] add bullet to "player"
