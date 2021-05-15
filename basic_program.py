@@ -21,6 +21,7 @@ FOOD_REWARD = 25
 epsilon = 0.9
 EPS_DECAY = 0.9998 
 SHOW_EVERY = 5000
+MAX_STEPS = 200
 
 start_q_table = None
 
@@ -176,7 +177,7 @@ def main(epsilon):
             show = False
 
         episode_reward = 0
-        for i in range(200):
+        for i in range(MAX_STEPS):
             obs = (player-food, player-enemy)
             #print(obs)
             if np.random.random() > epsilon:
