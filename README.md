@@ -11,6 +11,9 @@ The reinforcement learning based ai is learning in 25000 epochs to achive the hi
 - pickle
 - pygame
 
+**Example run (50000 epochs):**
+![](game_ai.GIF)
+
 **global parameters**
 Parameter | Default | Description
 ----------|--------|----------
