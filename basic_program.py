@@ -1,8 +1,8 @@
 import numpy as np
-import pickle
-import time
 import pygame
 
+import pickle
+import time
 import sys
 import random
 
@@ -20,7 +20,7 @@ ENEMY_PENALTY = 300
 FOOD_REWARD = 25
 epsilon = 0.9
 EPS_DECAY = 0.9998 
-SHOW_EVERY = 500
+SHOW_EVERY = 5000
 
 start_q_table = None
 
@@ -123,12 +123,12 @@ def load_walls():
         '  ###     ',
         '          ',
         '          ',
-        '      ### ',
+        '      ##  ',
         '     #  # ',
         '     # ## ',
         '          ',
-        '          ',
-        ' ###      ',
+        ' #        ',
+        ' ##       ',
     ]
     walls = []
     y = 0
@@ -209,14 +209,16 @@ def main(epsilon):
             q_table[obs][action] = new_q
 
             if show:
-                font = pygame.font.SysFont(None, 24)
-                img = font.render("Epoch: " + str(episode), True, (0, 0, 0))
+                epochfont = pygame.font.SysFont(None, 24)
+                img = epochfont.render("Epoch: " + str(episode), True, (0, 0, 0))
+                rewardfont = pygame.font.SysFont(None, 24)
+                img1 = rewardfont.render("Reward: " + str(episode_reward + reward), True, (0, 0, 0))
                 last_time = time.perf_counter()
                 duration = time.perf_counter() - last_time
                 last_time += duration
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        pygame.quit() 
+                        pygame.quit()
                     
                 screen.fill((200, 200, 200))
                 for obj in objects:
@@ -229,6 +231,7 @@ def main(epsilon):
                 for obj in walls:
                     obj.draw(screen, (255, 125, 0))
                 screen.blit(img, (20, 20))
+                screen.blit(img1, (20, 50))
 
                 pygame.display.update()
                 pygame.time.delay(50)
