@@ -100,14 +100,14 @@ class Bullet:
 		self.path_len = math.sqrt(self.deltax * self.deltax + self.deltay * self.deltay)
 
 		self.steps = int(self.path_len / self.speed)
-		self.path = (-y2 - -y1) / (x2 - x1)
+		self.path = self.deltay / self.deltax
 		# print(self.path)
 		self.x_step = self.deltax / self.steps
 
 	def update(self, duration):
 		self.pos[0] = (self.x_step * self.step) + self.startpos[0]
 		self.pos[1] = (self.path * (self.x_step * self.step)) * -1 - self.startpos[1]
-		print(self.x_step)
+		print(self.step)
 		self.step += 1
 
 
