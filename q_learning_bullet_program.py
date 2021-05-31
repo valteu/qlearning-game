@@ -166,16 +166,6 @@ class Bullet:
 		self.cy += self.dy
 		self.x = int(self.cx)
 		self.y = int(self.cy)
-		if 0 <= self.x <= WIDTH: 
-			pass
-		else:
-			objects.remove(bullet)
-			BULLET_SHOT = False
-		if 0 <= self.y <= HEIGHT:
-			pass
-		else:
-			objects.remove(bullet)
-			BULLET_SHOT = False
 	
 def main(epsilon):
 	screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -190,12 +180,14 @@ def main(epsilon):
 	BULLET_SHOT = False
 	episode_rewards = []
 	for episode in range(EPISODES):
-		enemy = Enemy([600, 240])
+		enemy_spawn = np.random.randint(0, len(posstate)) * 80
+		friend_spawn = np.random.randint(0, len(posstate)) * 80
+		enemy = Enemy([600, enemy_spawn])
 		agent = Agent(AGENT_POS)
-		friend = Friend([600, 480])
+		friend = Friend([600, friend_spawn])
 		objects = [friend, enemy, agent]
 
-		if episode % SHOW_EVERY == 0:
+		if episode % SHOW_EVERY == 0 or episode == EPISODES:
 			show = True
 		else:
 			show = False
@@ -208,7 +200,21 @@ def main(epsilon):
 			else:
 				action = np.random.randint(0, 10)
 
-			agent.shoot(objects, action)
+			if BULLET_SHOT == False:
+				agent.shoot(objects, action)
+				BULLET_SHOT = True
+			if BULLET_SHOT == True:
+				if 0 <= bullet.x <= WIDTH: 
+					pass
+				else:
+					objects.remove(bullet)
+					BULLET_SHOT = False
+				if 0 <= bullet.y <= HEIGHT:
+					pass
+				else:
+					objects.remove(bullet)
+					BULLET_SHOT = False
+
 
 			if agent.posstate == enemy.posstate:
 				reward = ENEMY_HIT
@@ -230,9 +236,13 @@ def main(epsilon):
 			q_table[obs][action] = new_q
 
 			if show:
+				print(episode)
+				print(i)
+				print("--------------------")
 				print("enemy: ", enemy.posstate)
 				print("friend: ", friend.posstate)
 				print("target: ", action)
+				print("reward: ", reward + episode_reward)
 				print("=====================")
 				last_time = time.perf_counter()
 				duration = time.perf_counter() - last_time
@@ -261,8 +271,5 @@ def main(epsilon):
 				break
 		episode_rewards.append(episode_reward)
 		epsilon *= EPS_DECAY
-
-	oving_avg = np.convolve(episode_rewards, np.ones((SHOW_EVERY,))/SHOW_EVERY, mode='valid')
-	print(oving_avg)
 
 main(epsilon)
