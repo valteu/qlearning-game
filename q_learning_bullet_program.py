@@ -19,14 +19,14 @@ AGENT_POS = [20, int(HEIGHT / 2 - HEIGHT / 20)]
 
 DISCRETE_OS_SIZE = [10]
 
-EPISODES = 25000
+EPISODES = 250000
 SHOOT_PENALTY = 1
 ENEMY_HIT = 25
 FRIEND_HIT = 300
 epsilon = 0.9
 EPS_DECAY = 0.9998 
-SHOW_EVERY = 5000
-MAX_STEPS = 20
+SHOW_EVERY = 50000
+MAX_STEPS = 50
 posstate = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 actions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 LEARNING_RATE = 0.1
@@ -169,12 +169,12 @@ class Bullet:
 		if 0 <= self.x <= WIDTH: 
 			pass
 		else:
-			# objects.remove(bullet)
+			objects.remove(bullet)
 			BULLET_SHOT = False
 		if 0 <= self.y <= HEIGHT:
 			pass
 		else:
-			# objects.remove(bullet)
+			objects.remove(bullet)
 			BULLET_SHOT = False
 	
 def main(epsilon):
@@ -186,7 +186,6 @@ def main(epsilon):
 		for ii in range(-len(posstate)+1, len(posstate)):
 			q_table[(i, ii)] = [np.random.uniform(-5, 0) for i in range(len(actions))]
 
-	print(q_table)
 	show = False
 	BULLET_SHOT = False
 	episode_rewards = []
@@ -198,7 +197,6 @@ def main(epsilon):
 
 		if episode % SHOW_EVERY == 0:
 			show = True
-			print("#########################")
 		else:
 			show = False
 
@@ -209,7 +207,6 @@ def main(epsilon):
 				action = np.argmax(q_table[obs])
 			else:
 				action = np.random.randint(0, 10)
-			print(np.argmax(q_table[obs]))
 
 			agent.shoot(objects, action)
 
@@ -233,14 +230,10 @@ def main(epsilon):
 			q_table[obs][action] = new_q
 
 			if show:
-				print("=================")
-				print("=================")
-				print("=================")
-				print("=================")
-				print("=================")
-				print("=================")
-				print("=================")
-				print("=================")
+				print("enemy: ", enemy.posstate)
+				print("friend: ", friend.posstate)
+				print("target: ", action)
+				print("=====================")
 				last_time = time.perf_counter()
 				duration = time.perf_counter() - last_time
 				last_time += duration
@@ -262,6 +255,7 @@ def main(epsilon):
 				pygame.time.delay(50)
 				time.sleep(max(0, 1 / 60 - (time.perf_counter() - last_time)))
 				sys.stdout.flush()
+
 			episode_reward += reward
 			if reward == ENEMY_HIT or reward == -FRIEND_HIT:
 				break
