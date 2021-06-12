@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import pygame
 
 import time
@@ -8,29 +9,28 @@ import math
 
 pygame.init()
 pygame.font.init()
-
 X_DISTANCE = 10
-
 WIDTH = 800
 HEIGHT = 800
-
 BULLET_SHOT = False
 AGENT_POS = [20, int(HEIGHT / 2 - HEIGHT / 20)]
 
-DISCRETE_OS_SIZE = [10]
-
-EPISODES = 250000
+EPISODES = 25000
 SHOOT_PENALTY = 1
 ENEMY_HIT = 25
 FRIEND_HIT = 300
 epsilon = 0.9
 EPS_DECAY = 0.9998 
-SHOW_EVERY = 50000
+
+SHOW_EVERY = 5000
 MAX_STEPS = 50
 posstate = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 actions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 LEARNING_RATE = 0.1
 DISCOUNT = 0.95
+
+rewards = []
+x_axis = []
 
 class Enemy:
 
@@ -40,13 +40,11 @@ class Enemy:
 		self.height = int(HEIGHT / 10)
 		self.speed = int(HEIGHT / 10)
 		self.posstate = pos[1] / 80
-
 	def draw(self, screen):
 		x, y = self.pos
 		w = self.width
 		h = self.height
 		pygame.draw.rect(screen, (255, 0, 0), (x, y, w, h))
-
 	def update(self, duration, objects):
 		direction = np.random.randint(-1, 2)
 		if direction == -1 and int(self.pos[1] - self.speed) >= 0:
@@ -65,13 +63,11 @@ class Friend:
 		self.height = int(HEIGHT / 10)
 		self.speed = int(HEIGHT / 10)
 		self.posstate = pos[1] / 80
-
 	def draw(self, screen):
 		x, y = self.pos
 		w = self.width
 		h = self.height
 		pygame.draw.rect(screen, (0, 255, 0), (x, y, w, h))
-
 	def update(self, duration, objects):
 		direction = np.random.randint(-1, 2)
 		if direction == -1 and int(self.pos[1] - self.speed) >= 0:
@@ -89,7 +85,6 @@ class Agent:
 		self.width = int(WIDTH / 10)
 		self.height = int(HEIGHT / 10)
 		self.posstate = np.random.randint(0, 10)
-
 	def draw(self, screen):
 		self.pos
 		x, y = self.pos
@@ -135,15 +130,13 @@ class Agent:
 		elif action == 9:
 			target = [600, 9 * HEIGHT / 10]
 			self.posstate = posstate[9]
-
 		global bullet
 		startpos = [int(self.pos[0] + self.width / 2), int(HEIGHT / 2)]
-
 		bullet = Bullet(startpos, target)
 		objects.append(bullet)
 
 	def __sub__(self, other):
-		return (self.posstate-other.posstate)
+		return (self.posstate-other.posstate)	
 
 class Bullet:
 
@@ -166,11 +159,20 @@ class Bullet:
 		self.cy += self.dy
 		self.x = int(self.cx)
 		self.y = int(self.cy)
-	
+		if 0 <= self.x <= WIDTH: 
+			pass
+		else:
+			objects.remove(bullet)
+			BULLET_SHOT = False
+		if 0 <= self.y <= HEIGHT:
+			pass
+		else:
+			objects.remove(bullet)
+			BULLET_SHOT = False
+
 def main(epsilon):
 	screen = pygame.display.set_mode((WIDTH, HEIGHT))
 	pygame.display.set_caption('ai aim game')
-
 	q_table = {}
 	for i in range(-len(posstate)+1, len(posstate)):
 		for ii in range(-len(posstate)+1, len(posstate)):
@@ -180,14 +182,12 @@ def main(epsilon):
 	BULLET_SHOT = False
 	episode_rewards = []
 	for episode in range(EPISODES):
-		enemy_spawn = np.random.randint(0, len(posstate)) * 80
-		friend_spawn = np.random.randint(0, len(posstate)) * 80
-		enemy = Enemy([600, enemy_spawn])
+		enemy = Enemy([600, 240])
 		agent = Agent(AGENT_POS)
-		friend = Friend([600, friend_spawn])
+		friend = Friend([600, 480])
 		objects = [friend, enemy, agent]
 
-		if episode % SHOW_EVERY == 0 or episode == EPISODES:
+		if episode % SHOW_EVERY == 0:
 			show = True
 		else:
 			show = False
@@ -199,22 +199,7 @@ def main(epsilon):
 				action = np.argmax(q_table[obs])
 			else:
 				action = np.random.randint(0, 10)
-
-			if BULLET_SHOT == False:
 				agent.shoot(objects, action)
-				BULLET_SHOT = True
-			if BULLET_SHOT == True:
-				if 0 <= bullet.x <= WIDTH: 
-					pass
-				else:
-					objects.remove(bullet)
-					BULLET_SHOT = False
-				if 0 <= bullet.y <= HEIGHT:
-					pass
-				else:
-					objects.remove(bullet)
-					BULLET_SHOT = False
-
 
 			if agent.posstate == enemy.posstate:
 				reward = ENEMY_HIT
@@ -222,11 +207,9 @@ def main(epsilon):
 				reward = -FRIEND_HIT
 			else:
 				reward = -SHOOT_PENALTY
-
 			new_obs = (agent-friend, agent-enemy)
 			max_future_q = np.max(q_table[new_obs])
 			current_q = q_table[obs][action]
-
 			if reward == ENEMY_HIT:
 				new_q = ENEMY_HIT
 			elif reward == -FRIEND_HIT:
@@ -247,20 +230,16 @@ def main(epsilon):
 				last_time = time.perf_counter()
 				duration = time.perf_counter() - last_time
 				last_time += duration
-
 				for event in pygame.event.get():
 					if event.type == pygame.QUIT:
 						show = False
 						pygame.quit()
 					
-
 				for obj in objects:
 					obj.update(duration, objects)
-
 				screen.fill((200, 200, 200))
 				for obj in objects:
 					obj.draw(screen)
-
 				pygame.display.update()
 				pygame.time.delay(50)
 				time.sleep(max(0, 1 / 60 - (time.perf_counter() - last_time)))
@@ -269,7 +248,15 @@ def main(epsilon):
 			episode_reward += reward
 			if reward == ENEMY_HIT or reward == -FRIEND_HIT:
 				break
+		if episode % 100 == 0:
+			rewards.append(reward)
 		episode_rewards.append(episode_reward)
 		epsilon *= EPS_DECAY
-
+	oving_avg = np.convolve(episode_rewards, np.ones((SHOW_EVERY,))/SHOW_EVERY, mode='valid')
+	print(oving_avg)
+	for i in range(int(EPISODES/100)):
+		x_axis.append(i*100)
+	print(len(x_axis), len(rewards))
+	plt.plot(x_axis, rewards)
+	plt.show()
 main(epsilon)
