@@ -294,7 +294,7 @@ def main(epsilon):
 	for i in range(int(EPISODES)):
 		x_axis.append(i)
 	
-	n = 10
+	n = 100
 
 	list2 = [sum(episode_rewards[i:i+n])//n for i in range(0,len(episode_rewards),n)]
 	for i in range(0,len(episode_rewards)):
