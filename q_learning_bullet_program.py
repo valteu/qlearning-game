@@ -1,304 +1,156 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pygame
+import pandas as pd
 
-import time
-import sys
-import random
-import math
+INTERVALL_SIZE = 1.5
+database = pd.read_excel(r'C:\Users\vtt\Desktop\stellerator_database.xlsx', sheet_name="ishcdb_26", nrows=0)
 
-pygame.init()
-pygame.font.init()
-X_DISTANCE = 10
-WIDTH = 800
-HEIGHT = 800
-BULLET_SHOT = False
-AGENT_POS = [20, int(HEIGHT / 2 - HEIGHT / 20)]
+database_columns = database.columns.ravel()
 
-EPISODES = 25000
-SHOOT_PENALTY = 1
-ENEMY_HIT = 25
-FRIEND_HIT = 300
-epsilon = 0.9
-EPS_DECAY = 0.9998 
+stelleratorlist = np.array(np.unique(database['STELL']))
 
-SHOW_EVERY = 5000
-MAX_STEPS = 50
-posstate = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-actions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-LEARNING_RATE = 0.1
-DISCOUNT = 0.95
+# database_w7 = database.loc[(database['STELL'] == "W7-AS") & (database["NEBAR"] > 5e19)]
 
-rewards = []
-x_axis = []
+# intervall:
+'''
+def intervall(column):
+    intervall = []
+    status = ""
+    if np.min(column) < 0:
+        min_ = np.min(column)
+        status = "smaller 0"
+    else:
+        min_ = np.min(column[column>0])
+        status = "greater 0"
+    while min_ * INTERVALL_SIZE < np.max(column):
+        if status == "smaller 0":
+            if min_ < -0.5:
+                intervall.append([min_, min_ / INTERVALL_SIZE])
+                min_ /= INTERVALL_SIZE
+            elif -0.5 < min_ < 0:
+                intervall.append([min_, min_ / -INTERVALL_SIZE])
+                min_ /= -INTERVALL_SIZE
+            elif min_ > 0:
+                intervall.append([min_, min_ * INTERVALL_SIZE])
+                min_ *= INTERVALL_SIZE     
+        else:
+            intervall.append([min_, min_ * INTERVALL_SIZE])
+            min_ *= INTERVALL_SIZE
+            
+    intervall.append([0.9 * np.max(column), np.max(column)])
+    return(intervall)
+'''
+def intervall(column):
+    intervall = []
+    if np.min(column) < 0:
+        if np.absolute(np.min(column)) < np.min(column[column>0]):
+            min_ = np.absolute(np.min(column))
+        else:
+            min_ = np.min(column[column>0])
+    else:
+        min_ = np.min(column[column>0])
+    while min_ * 1.5 < np.max(column):
 
-class Enemy:
+        intervall.append([min_, min_ * 1.5])
+        min_ *= 1.5
+    intervall.append([0.9 * np.max(column), np.max(column)])
+    return(intervall)
 
-	def __init__(self, pos):
-		self.pos = pos
-		self.width = int(WIDTH / 10)
-		self.height = int(HEIGHT / 10)
-		self.speed = int(HEIGHT / 10)
-		self.posstate = pos[1] / 80
-	def draw(self, screen):
-		x, y = self.pos
-		w = self.width
-		h = self.height
-		pygame.draw.rect(screen, (255, 0, 0), (x, y, w, h))
-	def update(self, objects):
-		direction = np.random.randint(-1, 2)
-		if direction == -1 and int(self.pos[1] - self.speed) >= 0:
-			self.pos[1] -= self.speed
-		elif direction == 0:
-			pass
-		elif direction == 1 and int(self.pos[1] + self.speed) <= WIDTH:
-			self.pos[1] += self.speed
-		self.posstate = self.pos[1] / 80
-
-class Friend:
-
-	def __init__(self, pos):
-		self.pos = pos
-		self.width = int(WIDTH / 10)
-		self.height = int(HEIGHT / 10)
-		self.speed = int(HEIGHT / 10)
-		self.posstate = pos[1] / 80
-	def draw(self, screen):
-		x, y = self.pos
-		w = self.width
-		h = self.height
-		pygame.draw.rect(screen, (0, 255, 0), (x, y, w, h))
-	def update(self, objects):
-		direction = np.random.randint(-1, 2)
-		if direction == -1 and int(self.pos[1] - self.speed) >= 0:
-			self.pos[1] -= self.speed
-		elif direction == 0:
-			pass
-		elif direction == 1 and int(self.pos[1] + self.speed) <= WIDTH:
-			self.pos[1] += self.speed
-		self.posstate = self.pos[1] / 80
-
-class Agent:
-
-	def __init__(self, pos):
-		self.pos = pos
-		self.width = int(WIDTH / 10)
-		self.height = int(HEIGHT / 10)
-		self.posstate = np.random.randint(0, 10)
-
-	def draw(self, screen):
-		self.pos
-		x, y = self.pos
-		w = self.width
-		h = self.height
-		pygame.draw.rect(screen, (0, 0, 255), (x, y, w, h))
-
-	def update(self, objects):
-		pass
-
-	def shoot(self, objects, actioninput=False):
-		if actioninput == False:
-			action = np.random.randint(0, 10) #10 actions
-		else:
-			action = actioninput
-		if action == 0:
-			target = [600, 0 * HEIGHT / 10]
-		elif action == 1:
-			target = [600, 1 * HEIGHT / 10]
-		elif action == 2:
-			target = [600, 2 * HEIGHT / 10]
-		elif action == 3:
-			target = [600, 3 * HEIGHT / 10]
-		elif action == 4:
-			target = [600, 4 * HEIGHT / 10]
-		elif action == 5:
-			target = [600, 5 * HEIGHT / 10]
-		elif action == 6:
-			target = [600, 6 * HEIGHT / 10]
-		elif action == 7:
-			target = [600, 7 * HEIGHT / 10]
-		elif action == 8:
-			target = [600, 8 * HEIGHT / 10]
-		elif action == 9:
-			target = [600, 9 * HEIGHT / 10]
-		global bullet
-		startpos = [int(self.pos[0] + self.width / 2), int(HEIGHT / 2)]
-		bullet = Bullet(startpos, target)
-		objects.append(bullet)
-
-	def __sub__(self, other):
-		return (self.posstate-other.posstate)	
-
-
-class Bullet:
-
-	def __init__(self, pos ,aim):
-		self.x, self.y = pos
-		self.radius = 20
-		self.speed = 50
-		self.angle = math.atan2(aim[1] - pos[1], aim[0] - pos[0]) #angle to target in radians
-		self.dx = math.cos(self.angle) * self.speed
-		self.dy = math.sin(self.angle) * self.speed
-		self.cx, self.cy = pos
-		self.posstate = -1
-
-	def draw(self, screen):
-		r = self.radius
-		pygame.draw.circle(screen, (0, 0, 0), (self.x, self.y), r)
-
-	def update(self, objects):
-		self.cx += self.dx
-		self.cy += self.dy
-		self.x = int(self.cx)
-		self.y = int(self.cy)
-
-		if 600 <= self.x <= 680:
-			if 0 < self.y < HEIGHT / 10:
-				self.posstate = 0
-			elif HEIGHT / 10 < self.y < 2 *  HEIGHT / 10:
-				self.posstate = 1
-			elif 2 * HEIGHT / 10 < self.y < 3 *  HEIGHT / 10:
-				self.posstate = 2
-			elif 3 * HEIGHT / 10 < self.y < 4 *  HEIGHT / 10:
-				self.posstate = 3
-			elif 4 * HEIGHT / 10 < self.y < 5 *  HEIGHT / 10:
-				self.posstate = 4
-			elif 5 * HEIGHT / 10 < self.y < 6 *  HEIGHT / 10:
-				self.posstate = 5
-			elif 6 * HEIGHT / 10 < self.y < 7 *  HEIGHT / 10:
-				self.posstate = 6
-			elif 7 * HEIGHT / 10 < self.y < 8 *  HEIGHT / 10:
-				self.posstate = 7
-			elif 8 * HEIGHT / 10 < self.y < 9 *  HEIGHT / 10:
-				self.posstate = 8
-			elif 9 * HEIGHT / 10 < self.y < HEIGHT:
-				self.posstate = 9
-		# elif self.x > WIDTH:
-		# 	objects.remove(bullet)
-		# 	BULLET_SHOT = False
-		# if 0 <= self.y <= HEIGHT:
-		# 	pass
-		# else:
-		# 	objects.remove(bullet)
-		# 	BULLET_SHOT = False
-
-def main(epsilon):
-	screen = pygame.display.set_mode((WIDTH, HEIGHT))
-	pygame.display.set_caption('ai aim game')
-	q_table = {}
-	for i in range(-len(posstate), len(posstate)):
-		for ii in range(-len(posstate), len(posstate)):
-			q_table[(i, ii)] = [np.random.uniform(-5, 0) for i in range(len(actions))]
-
-	show = False
-	episode_rewards = []
-	for episode in range(EPISODES):
-		BULLET_SHOT = False
-		enemy = Enemy([600, 240])
-		agent = Agent(AGENT_POS)
-		friend = Friend([600, 480])
-		objects = [friend, enemy, agent]
-
-		if episode % SHOW_EVERY == 0:
-			show = True
-		else:
-			show = False
-
-		episode_reward = 0
-		for i in range(MAX_STEPS):
-			if BULLET_SHOT == True:
-				obs = (int(agent-friend), int(agent-enemy))
-			else:
-				obs = (np.random.randint(0, 10), np.random.randint(0, 10))
-			print("obs: ")
-			print(obs)
-			if np.random.uniform() > epsilon:
-				action = np.argmax(q_table[obs])
-			else:
-				action = np.random.randint(0, 10)
-			if BULLET_SHOT == False:
-				agent.shoot(objects, action)
-				BULLET_SHOT = True
-			for obj in objects:
-				obj.update(objects)
-			if BULLET_SHOT == True:
-				if 0 <= bullet.x <= WIDTH: 
-					pass
-				else:
-					objects.remove(bullet)
-					BULLET_SHOT = False
-				if 0 <= bullet.y <= HEIGHT:
-					pass
-				else:
-					objects.remove(bullet)
-					BULLET_SHOT = False
-
-			if bullet.posstate == enemy.posstate:
-				reward = ENEMY_HIT
-				print("enemy hit")
-			elif bullet.posstate == friend.posstate:
-				reward = -FRIEND_HIT
-				print("friend hit")
-			else:
-				reward = -SHOOT_PENALTY
-			if BULLET_SHOT == True:
-				new_obs = (agent-friend, agent-enemy)
-			else:
-				new_obs = (np.random.randint(0, 10), np.random.randint(0, 10))
-			print("new_obs: ")
-			print(new_obs)
-			max_future_q = np.max(q_table[new_obs])
-			current_q = q_table[obs][action]
-			if reward == ENEMY_HIT:
-				new_q = ENEMY_HIT
-			elif reward == -FRIEND_HIT:
-				new_q = -FRIEND_HIT
-			else:
-				new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
-			q_table[obs][action] = new_q
-
-
-			if show:
-				print(episode)
-				print(i)
-				print("--------------------")
-				print("enemy: ", enemy.posstate)
-				print("friend: ", friend.posstate)
-				print("target: ", action)
-				print("reward: ", reward + episode_reward)
-				print("=====================")
-				last_time = time.perf_counter()
-				duration = time.perf_counter() - last_time
-				last_time += duration
-				for event in pygame.event.get():
-					if event.type == pygame.QUIT:
-						show = False
-						pygame.quit()
-					
-				screen.fill((200, 200, 200))
-				for obj in objects:
-					obj.draw(screen)
-				pygame.display.update()
-				pygame.time.delay(100)
-				time.sleep(max(0, 1 / 60 - (time.perf_counter() - last_time)))
-				sys.stdout.flush()
-
-			episode_reward += reward
-			if reward == ENEMY_HIT or reward == -FRIEND_HIT:
-				break
-		episode_rewards.append(episode_reward)
-
-		epsilon *= EPS_DECAY
-	oving_avg = np.convolve(episode_rewards, np.ones((SHOW_EVERY,))/SHOW_EVERY, mode='valid')
-	print(oving_avg)
-	for i in range(int(EPISODES)):
-		x_axis.append(i)
-	
-	n = 100
-
-	list2 = [sum(episode_rewards[i:i+n])//n for i in range(0,len(episode_rewards),n)]
-	for i in range(0,len(episode_rewards)):
-		episode_rewards[i] = list2[i//n]
-	plt.plot(x_axis, episode_rewards)
-	plt.show()
-main(epsilon)
+testi=0
+for stell_ in stelleratorlist:
+    if stell_ == "W7-X" :
+        continue
+    database_stell = database.loc[(database["STELL"] == stell_)]
+    ptot_intervall = intervall(database_stell["PTOT"])
+    bt_intervall = intervall(database_stell["BT"])
+        
+    iota23_intervall = intervall(database_stell["IOTA23"])
+    iota0_intervall = intervall(database_stell["IOTA0"])
+    rgeo_intervall = intervall(database_stell["RGEO"])
+    aeff_intervall = intervall(database_stell["AEFF"])
+    print("STELLERATOR: ", stell_)
+    for ptot_ in ptot_intervall:
+        for bt_ in bt_intervall:
+            for iota0_ in iota0_intervall:
+                for rgeo_ in rgeo_intervall:
+                    for aeff_ in aeff_intervall:
+                        database_i = database_stell.loc[(database_stell["PTOT"] >= ptot_[0])  & (database_stell["PTOT"] <= ptot_[1]) & (database_stell["BT"] >= bt_[0]) & (database_stell["BT"] <= bt_[1]) &
+                        (database_stell["IOTA0"] >= iota0_[0]) & (database_stell["IOTA0"] <= iota0_[1]) & 
+                        (database_stell["RGEO"] >= rgeo_[0]) & (database_stell["RGEO"] <= rgeo_[1]) & (database_stell["AEFF"] >= aeff_[0]) 
+                        & (database_stell["AEFF"] <= aeff_[1])]
+                        '''
+                        database_c = database_i.loc[(database_i["PABSNBI"] > 0) & (database_i["PABSECH"] > 0)]
+                        if len(database_c) > 0 :
+                            print("c:",len(database_c))
+                            
+                        for a in range(len(database_i)):
+                            if np.isnan(database_i["PABSECH"].iat[a]) == False & np.isnan(database_i["PABSNBI"].iat[a]) == False:
+                                if database_i["PABSECH"].iat[a] > 0:
+                                    if database_i["PABSNBI"].iat[a] > 0:
+                                        print(database_i["PABSECH"].iat[a])                            
+                                        print(database_i["PABSNBI"].iat[a])
+                        '''
+                        # if database_i.empty == False: 
+                        '''
+                        for i in range(len(database_i)):
+                            if database_i["NEBAR"].iat[i] == database_i["NEBAR"].iat[i] and database_i["TAUEDIA"].iat[i] == database_i["TAUEDIA"].iat[i] and database_i["ISS04"].iat[i] == database_i["ISS04"].iat[i] and database_i["AEFF"].iat[i] == database_i["AEFF"].iat[i] and database_i["BT"].iat[i] == database_i["BT"].iat[i] and database_i["RGEO"].iat[i] == database_i["RGEO"].iat[i] and database_i["IOTA23"].iat[i] == database_i["IOTA23"].iat[i] and database_i["PTOT"].iat[i] == database_i["PTOT"].iat[i]:
+                                database_n = database_i
+                                # nebar_list.append(database_i["NEBAR"])
+                                # tauedia_list.append(database_i["TAUEDIA"])
+                                # iss04_list.append(10 ** database_i["LOG_TAUE_ISS04"])
+                                a = 10 ** database_i["LOG_TAUE_ISS04"].iat[i]
+                                b = (0.134 * database_i["AEFF"].iat[i] ** 2.28) * (database_i["RGEO"].iat[i] ** 0.64) * ((database_i["PTOT"].iat[i] / 1e6) ** (-0.61)) * ((database_i["NEBAR"].iat[i] / 1e19) ** 0.54) * (database_i["BT"].iat[i] ** 0.84) * (database_i["IOTA0"].iat[i] ** 0.41)
+                                print("ISS04 = ", a)
+                                print("      = ", b)
+                        '''
+                        if len(database_i) > 5:
+                            fig, axs_ = plt.subplots(3, 1)
+                            fig.set_figheight(15)
+                            fig.set_figwidth(15)
+                            fig.suptitle("Stellerator: " + stell_ + " Ptot Mittelwert: " + 0.5 * (ptot_[0] + ptot[1]), y=0.98, size=30)
+                            database_a = database_i.loc[(database_i["PABSECH"] > 0) & (database_i["PABSNBI"] == 0) & (database_i["PABSICH"] == 0)]
+                            database_b = database_i.loc[(database_i["PABSNBI"] > 0) & (database_i["PABSECH"] == 0) & (database_i["PABSICH"] == 0)]
+                            database_c = database_i.loc[(database_i["PABSNBI"] > 0) & (database_i["PABSECH"] > 0)]
+                            axs_[0].plot(database_a["NEBAR"], database_a["TAUEDIA"] / (10 ** database_a["LOG_TAUE_ISS04"]), "o")
+                            axs_[0].set_title("PABSECH")
+                            axs_[0].set_xlabel("$\\bar{n}_e$")
+                            axs_[0].set_ylim([0, 1.5])
+                            axs_[0].set_ylabel("$\\tau_\\mathrm{E,ECRH}$")
+                            axs_[1].plot(database_b["NEBAR"], database_b["TAUEDIA"] / (10 ** database_b["LOG_TAUE_ISS04"]), "o")
+                            axs_[1].set_xlabel("$\\bar{n}_e$")
+                            axs_[1].set_ylabel("$\\tau_\\mathrm{E,NBI}$")
+                            axs_[1].set_ylim([0, 1.5])
+                            axs_[1].plot(database_c["NEBAR"], database_c["TAUEDIA"] / (10 ** database_c["LOG_TAUE_ISS04"]), "o")
+                            # axs_[1, 1].plot(database_c["PABSECH"], database_c["NEBAR"], "o")
+                            axs_[2].set_xlabel("$\\bar{n}_e$")
+                            axs_[2].set_ylabel("$\\tau_\\mathrm{E,ECRH+NBI}$")
+                            axs_[2].set_ylim([0, 1.5])
+                            
+                            testi+=1
+                            '''
+                            axs_[2, 0].plot(database_i["NEBAR"], database_i["TAUEDIA"], "o")
+                            axs_[2, 0].set_xlabel("$\\bar{n}_e$")
+                            axs_[2, 0].set_title("a=%.3f,R=%.3f,Bt=%.2f,iota=%.2f,P=%.3f"%(aeff_[0], rgeo_[0], bt_[0], iota23_[0], ptot_[0] / 1e6))
+                            axs_[2, 1].plot(database_i["NEBAR"], database_i["TAUEDIA"] / (10 ** database_i["LOG_TAUE_ISS04"]), "o")
+                            axs_[2, 1].set_xlabel("$\\bar{n}_e$")
+                            '''
+                            plt.tight_layout()
+                            plt.subplots_adjust(top=0.9)
+                            plt.savefig("test%0.4d.png" %testi)
+                            plt.close("all")
+                                    # plt.close("all")
+'''
+# plt.plot(nebar_, tauedia_, "o")
+# plt.xlabel("$\\bar{n}_e$")
+# plt.ylabel("$\\tau_\\mathrm{E}$")
+# plt.ylim([0, 0.1])
+# plt.show
+for i in range(len(nebar_list)):
+    axs[0].plot(nebar_list[i], tauedia_list[i], "o")
+# plt.xlabel("$\\bar{n}_e$")
+# plt.ylabel("$\\tau_\\mathrm{E}$")
+# axs[0].ylim([0, 0.02])
+for i in range(len(iss04_list)):
+    axs[1].plot(nebar_list[i], iss04_list[i], "o")
+plt.show
+'''
