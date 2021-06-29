@@ -107,7 +107,7 @@ for stell_ in stelleratorlist:
                             fig, axs_ = plt.subplots(3, 1)
                             fig.set_figheight(15)
                             fig.set_figwidth(15)
-                            fig.suptitle("Stellerator: " + stell_ + " Ptot Mittelwert: " + 0.5 * (ptot_[0] + ptot[1]), y=0.98, size=30)
+                            fig.suptitle("Stellerator: " + stell_ + " ; Ptot Mittelwert: " + str(0.5 * (ptot_[0] + ptot_[1])), y=0.98, size=30)
                             database_a = database_i.loc[(database_i["PABSECH"] > 0) & (database_i["PABSNBI"] == 0) & (database_i["PABSICH"] == 0)]
                             database_b = database_i.loc[(database_i["PABSNBI"] > 0) & (database_i["PABSECH"] == 0) & (database_i["PABSICH"] == 0)]
                             database_c = database_i.loc[(database_i["PABSNBI"] > 0) & (database_i["PABSECH"] > 0)]
@@ -120,7 +120,7 @@ for stell_ in stelleratorlist:
                             axs_[1].set_xlabel("$\\bar{n}_e$")
                             axs_[1].set_ylabel("$\\tau_\\mathrm{E,NBI}$")
                             axs_[1].set_ylim([0, 1.5])
-                            axs_[1].plot(database_c["NEBAR"], database_c["TAUEDIA"] / (10 ** database_c["LOG_TAUE_ISS04"]), "o")
+                            axs_[2].plot(database_c["NEBAR"], database_c["TAUEDIA"] / (10 ** database_c["LOG_TAUE_ISS04"]), "o")
                             # axs_[1, 1].plot(database_c["PABSECH"], database_c["NEBAR"], "o")
                             axs_[2].set_xlabel("$\\bar{n}_e$")
                             axs_[2].set_ylabel("$\\tau_\\mathrm{E,ECRH+NBI}$")
