@@ -12,7 +12,7 @@ The reinforcement learning based ai is learning in 25000 epochs to achive the hi
 - pygame
 
 **Example run:**
-![](game_ai.GIF)
+![](0001-0658.gif)
 
 **global parameters**
 Parameter | Default | Description
