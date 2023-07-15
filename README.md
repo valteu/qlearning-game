@@ -1,4 +1,4 @@
-# Ai controlled box game
+# Q learning game
 
 The game consists of the objects "player" (=agent; blue box), "enemy" (red box), "food" (green box) and "wall" (orange box). The "enemy" and the "food" are moving randomly
 across the 10 x 10 field and the "player" is learning to catch the food and not to catch the enemy. Every time the "player" moves, a reward of -1 is added to the 
